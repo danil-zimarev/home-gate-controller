@@ -1,0 +1,102 @@
+{
+  "wifi": {
+    "ip": "10.90.10.125",
+    "mask": "255.255.255.0",
+    "ssid": "u47a",
+    "gw": "10.90.10.1",
+    "password": "dainlar32",
+    "dns": "10.90.10.2"
+  },
+  "pins": {
+    "1": {
+      "enabled": true
+    },
+    "0": {
+      "enabled": true
+    },
+    "16": {
+      "enabled": false
+    },
+    "2": {
+      "enabled": true
+    },
+    "17": {
+      "enabled": false
+    },
+    "10": {
+      "enabled": false
+    },
+    "20": {
+      "enabled": false
+    },
+    "11": {
+      "enabled": false
+    },
+    "12": {
+      "enabled": false
+    },
+    "19": {
+      "enabled": false
+    },
+    "13": {
+      "enabled": false
+    },
+    "9": {
+      "enabled": false
+    },
+    "8": {
+      "enabled": false
+    },
+    "28": {
+      "enabled": false
+    },
+    "18": {
+      "enabled": false
+    },
+    "3": {
+      "enabled": true
+    },
+    "21": {
+      "enabled": false
+    },
+    "5": {
+      "enabled": false
+    },
+    "15": {
+      "enabled": false
+    },
+    "LED": {
+      "enabled": true
+    },
+    "27": {
+      "enabled": false
+    },
+    "26": {
+      "enabled": false
+    },
+    "25": {
+      "enabled": false
+    },
+    "24": {
+      "enabled": false
+    },
+    "23": {
+      "enabled": false
+    },
+    "22": {
+      "enabled": false
+    },
+    "14": {
+      "enabled": false
+    },
+    "4": {
+      "enabled": false
+    },
+    "7": {
+      "enabled": false
+    },
+    "6": {
+      "enabled": false
+    }
+  }
+}

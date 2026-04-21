@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pico Configuration</title>
+  <style>
+    body {
+      font-family: "Segoe UI", Roboto, sans-serif;
+      background: #f5f7fa;
+      color: #333;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      max-width: 700px;
+      margin: 2rem auto;
+      background: white;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    h1 {
+      margin: 0;
+      color: #0066cc;
+    }
+
+    .subtitle {
+      color: #555;
+      font-size: 0.9rem;
+    }
+
+    section {
+      margin-bottom: 2.5rem;
+      border-top: 1px solid #eee;
+      padding-top: 1rem;
+    }
+
+    h2 {
+      font-size: 1.2rem;
+      color: #444;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem 1rem;
+      margin-bottom: 1rem;
+    }
+
+    label {
+      display: flex;
+      flex-direction: column;
+      font-size: 0.9rem;
+    }
+
+    input[type="text"],
+    input[type="password"] {
+      padding: 0.4rem;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+
+    button {
+      background: #0066cc;
+      color: white;
+      border: none;
+      padding: 0.6rem 1.2rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+
+    button:hover {
+      background: #0050a8;
+    }
+
+    .pin-list label {
+      display: block;
+      margin: 0.3rem 0;
+    }
+
+    .pin-toggle a {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #eef6ff;
+      padding: 0.6rem 1rem;
+      border-radius: 8px;
+      margin: 0.4rem 0;
+      text-decoration: none;
+      color: #222;
+      transition: background 0.2s;
+    }
+
+    .pin-toggle a:hover {
+      background: #d8eaff;
+    }
+
+    .toggle-state {
+      font-weight: bold;
+      color: #0066cc;
+    }
+
+    .status {
+      font-size: 0.9rem;
+      color: #555;
+      margin-top: 0.5rem;
+    }
+
+    /* ========================= */
+    /*        MOBILE STYLES      */
+    /* ========================= */
+
+    @media (max-width: 768px) {
+      .container {
+        margin: 1rem;
+        padding: 1.5rem;
+      }
+
+      h1 {
+        font-size: 1.5rem;
+      }
+
+      h2 {
+        font-size: 1.1rem;
+      }
+
+      .form-grid {
+        grid-template-columns: 1fr;
+        /* Stack form fields */
+      }
+
+      button {
+        width: 100%;
+      }
+
+      .pin-toggle a {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.3rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .container {
+        padding: 1rem;
+        border-radius: 8px;
+      }
+
+      h1 {
+        font-size: 1.3rem;
+      }
+
+      h2 {
+        font-size: 1rem;
+      }
+
+      input[type="text"],
+      input[type="password"] {
+        font-size: 0.9rem;
+        padding: 0.5rem;
+      }
+
+      button {
+        font-size: 0.9rem;
+        padding: 0.5rem 1rem;
+      }
+
+      .status {
+        font-size: 0.8rem;
+      }
+
+      .header-buttons {
+        margin-top: 1rem;
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+      }
+
+      .header-buttons button {
+        background: #0078d7;
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: background 0.2s ease;
+      }
+
+      .header-buttons button:hover {
+        background: #005fa3;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="container">
+    <header>
+      <h1>Pico Configuration Interface</h1>
+      <p class="subtitle">Manage Wi-Fi and GPIO</p>
+      <div class="header-buttons">
+        <button id="reload-btn">Reboot</button>
+        <button id="download-logs-btn">Download Logs</button>
+      </div>
+    </header>
+
+
+    <!-- Section 1: Network Form -->
+    <section>
+      <h2>1. Network Configuration</h2>
+      <form id="network-form">
+        <div class="form-grid">
+          <label>SSID: <input type="text" name="ssid" value="{{ssid}}" /></label>
+          <label>Password: <input type="password" name="password" value="{{password}}" /></label>
+          <label>IP Address: <input type="text" name="ip" value="{{ip}}" /></label>
+          <label>Subnet Mask: <input type="text" name="mask" value="{{mask}}" /></label>
+          <label>DNS: <input type="text" name="dns" value="{{dns}}" /></label>
+          <label>Gateway: <input type="text" name="gw" value="{{gw}}" /></label>
+        </div>
+        <button type="submit">Save Network Settings</button>
+      </form>
+      <p id="network-status" class="status"></p>
+    </section>
+
+    <!-- Section 2: Enable/Disable Pins -->
+    <section>
+      <h2>2. Configure Pins</h2>
+      <form id="pin-enable-form">
+        <div id="pin-enable-container" class="pin-list">
+          {{pin_checkboxes}}
+        </div>
+        <button type="submit">Save Enabled Pins</button>
+      </form>
+      <p id="pin-save-status" class="status"></p>
+    </section>
+
+    <!-- Section 3: Toggle Enabled Pins -->
+    <section>
+      <h2>3. Toggle Enabled Pins</h2>
+      <div id="pin-toggle-container" class="pin-toggle">
+        {{pin_toggles}}
+      </div>
+    </section>
+
+    <footer>
+      <small>Pico W Controller v1.0</small>
+    </footer>
+  </main>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const pinToggleContainer = document.getElementById("pin-toggle-container");
+
+      pinToggleContainer.addEventListener("click", async (e) => {
+        const link = e.target.closest(".pin-toggle-link");
+        if (!link) return;
+
+        e.preventDefault(); // prevent the default navigation
+
+        const pin = link.dataset.pin;
+        try {
+          const res = await fetch(link.href, { method: "POST" });
+          const data = await res.json();
+
+          if (data.status === "ok") {
+            const span = link.querySelector(".toggle-state");
+            span.textContent = data.state ? "ON" : "OFF";
+            span.style.color = data.state ? "green" : "red";
+          } else {
+            alert("Failed to toggle pin");
+          }
+        } catch (err) {
+          console.error(err);
+          alert("Error toggling pin");
+        }
+      });
+
+      const networkForm = document.getElementById('network-form');
+      const networkStatus = document.getElementById('network-status');
+
+      networkForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        networkStatus.textContent = 'Saving...';
+        const formData = Object.fromEntries(new FormData(networkForm).entries());
+        try {
+          const res = await fetch('/save_network', {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(formData),
+          });
+          const data = await res.json();
+          if (data.status === 'ok') {
+            networkStatus.textContent = "Network settings applied successfully";
+          } else {
+            networkStatus.textContent = "Failed to save network settings";
+          }
+        } catch (err) {
+          console.error(err);
+          networkStatus.textContent = "Error comunicating with Pico";
+        }
+      });
+
+      const pinForm = document.getElementById('pin-enable-form');
+      const pinStatus = document.getElementById('pin-save-status');
+
+      pinForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        pinStatus.textContent = 'Saving...';
+
+        const checkedPins = [...pinForm.querySelectorAll('input[type=checkbox]')]
+          .reduce((acc, i) => ({ ...acc, [i.name]: i.checked }), {});
+
+        try {
+          const res = await fetch('save_pins', {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ enabled_pins: checkedPins })
+          });
+
+          if (data.status === 'ok') {
+            pinStatus.textContent = "Enabled pins saved";
+
+            if (data.pins && typeof data.pins === 'object') {
+              Object.entries(data.pins).forEach(([pin, info]) => {
+                const checkbox = pinForm.querySelector(`input[name="${pin}"]`);
+                if (checkbox) {
+                  checkbox.checked = !!info.enabled;
+                }
+              });
+
+              pinToggleContainer.innerHTML = '';
+              Object.entries(data.pins).forEach(([pin, info]) => {
+                if (info.enabled) {
+                  const toggleLink = document.createElement('a');
+                  toggleLink.href = `/toggle/${pin}`;
+                  toggleLink.className = 'pin-toggle-link';
+                  toggleLink.dataset.pin = pin;
+                  toggleLink.innerHTML = `GPIO ${pin} <span class="toggle-state" style="color:red">OFF</span>`;
+                  pinToggleContainer.appendChild(toggleLink);
+                }
+              });
+
+            }
+          } else {
+            pinStatus.textContent = "Failed to save pins";
+          }
+        } catch (err) {
+          pinStatus.textContent = "Error communicating with pico";
+        }
+      });
+
+      const downloadLogsBtn = document.getElementById('download-logs-btn');
+      downloadLogsBtn.addEventListener('click', async () => {
+        try {
+          const res = await fetch('/logs');
+          if (!res.ok) throw new Error('Failed to fetch logs');
+          const data = await res.json();
+
+          if (data.status !== 'ok' || !data.logs) {
+            alert('Failed to load logs')
+            return
+          }
+
+          if (typeof JSZip === "undefined") {
+            const script = document.createElement("script");
+            script.src = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js";
+            document.head.appendChild(script);
+            await new Promise((resolve) => (script.onload = resolve));
+          }
+
+          const zip = new JSZip();
+          data.logs.forEach(log => {
+            const safeName = log.name.replace(/[^a-zA-Z0-9_.-]/g, '_');
+            const content = log.content || `Error: ${log.error || 'No content'}`;
+            zip.file(safeName, content);
+          })
+
+          const blob = await zip.generateAsync({ type: 'blob' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `pico_logs-${new Date().toISOString().slice(0, 10)}.zip`;
+          console.error('here')
+          a.click()
+          URL.revokeObjectURL(url);
+        } catch (err) {
+          alert('Error downloading logs')
+        }
+      })
+
+      const reloadBtn = document.getElementById('reload-btn');
+      reloadBtn.addEventListener('click', async() => {
+        reloadBtn.textContent = 'Rebooting...';
+        try {
+          const res = await fetch('/reload');
+          const data = await res.json();
+          if (data.status === 'ok') {
+            reloadBtn.textContent = 'Rebooting Pico...';
+            setTimeout(() => {
+              location.reload();
+            }, 6000);
+          } else {
+            alert('Failed to reboot Pico: ' + data.message);
+            reloadBtn.textContent = 'Reboot';
+          }
+        } catch(err) {
+          alert('Error contacting Pico');
+          console.error(err);
+          reloadBtn.textContent = 'Reboot';
+        }
+      })
+
+    });
+  </script>
+</body>
+
+</html>
