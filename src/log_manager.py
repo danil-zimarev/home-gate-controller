@@ -5,7 +5,7 @@ import network
 import os
 
 LOG_INTERVAL = 3600
-LOG_DIR = 'logs'
+LOG_DIR = '../logs'
 LOG_PREFIX = 'logs'
 LOG_RETENTION_DAYS = 7
 
