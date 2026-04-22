@@ -3,23 +3,27 @@ from config_manager import get_config
 
 PINS = {}
 
+def is_active_low(pin):
+    return pin.isdigit() and int(pin) < 16
+
+
 def init_pins():
-    global PINS, PIN_STATES
-    conf = get_config()
-    pins_conf = conf.get('pins', {})
+    PINS.clear()
+    pins = get_config().get('pins', {})
 
-    for p_num, settings in pins_conf.items():
-        if settings.get('enabled', False):
-            pin_id = int(p_num) if p_num != 'LED' else p_num
-            pin = Pin(pin_id, Pin.OUT)
-            pin.on() if pin_id != 'LED' and pin_id < 16 else pin.off()
-            PINS[p_num] = pin
-    
+    for name, cfg in pins.items():
+        if not cfg.get('enabled'):
+            continue
+        pin_id = name if name == 'LED' else int(name)
+        pin = Pin(pin_id, Pin.OUT)
+        pin.value(1 if is_active_low(name) else 0)
+        PINS[name] = pin
 
-def toggle_pin(pin_name):
-    if pin_name not in PINS:
+def toggle_pin(name):
+    pin = PINS.get(name)
+    if not pin:
         return None
-    PINS[pin_name].toggle()
-    pin_value = PINS[pin_name].value()
-    return not pin_value if pin_name.isdigit() and int(pin_name) < 16 else pin_value
+    pin.toggle()
+    value = pin.value()
+    return not value if is_active_low(name) else bool(value)
 
