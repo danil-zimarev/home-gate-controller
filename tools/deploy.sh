@@ -11,7 +11,6 @@ PORT="$1"
 
 sleep 1
 echo "Cleaning device filesystem..."
-echo "Cleaning device filesystem..."
 mpremote connect "$PORT" fs rm -r :
 
 echo "Deploying to $PORT..."

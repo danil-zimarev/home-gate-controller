@@ -1,101 +1,100 @@
-import uasyncio as asyncio
-from config_manager import get_config
+import os
 import time
 import network
-import os
+import uasyncio as asyncio
 
 LOG_INTERVAL = 3600
-LOG_DIR = '../logs'
+LOG_DIR = 'logs'
 LOG_PREFIX = 'logs'
 LOG_RETENTION_DAYS = 7
+sta = network.WLAN(network.STA_IF)
+TIMEZONE_OFFSET = 3 * 3600
 
-def ensure_log_dir():
+
+# ------------------------------------------------------------------------------------------
+# Helpers
+# ------------------------------------------------------------------------------------------
+def _ensure_dir():
     try:
-        if not LOG_DIR in os.listdir():
+        if LOG_DIR not in os.listdir():
             os.mkdir(LOG_DIR)
-    except Exception as e:
-        print("Error ensuring log directory:", e)
+    except OSError as e:
+        pass
 
-def get_network_state():
-    sta_if = network.WLAN(network.STA_IF)
-    return f'connected, {sta_if.ifconfig()} ' if sta_if.isconnected() else 'disconnected'
 
-def current_date_str():
-    t = time.localtime()
-    return "{:04d}-{:02d}-{:02d}".format(t[0], t[1], t[2])
+def now():
+    return time.localtime(time.time() + TIMEZONE_OFFSET)
 
-def current_time_str():
-    t = time.localtime()
-    return "{:02d}:{:02d}:{:02d}".format(t[3], t[4], t[5])
+def date_str():
+    y, m, d, *_ = now()
+    return f'{y:04d}-{m:02d}-{d:02d}'
 
-def get_log_filename(date_str=None):
-    if date_str is None:
-        date_str = current_date_str()
-    return f"{LOG_DIR}/{LOG_PREFIX}-{date_str}.log"
+def time_str():
+    _, _, _, h, mi, s, *_ = now()
+    return f'{h:02d}:{mi:02d}:{s:02d}'
+
+def log_file():
+    return f'{LOG_DIR}/{LOG_PREFIX}-{date_str()}.log'
+
+def network_state():
+    return f'connected, {sta.ifconfig()}' if sta.isconnected() else 'disconnected'
 
 def log(msg):
-    ensure_log_dir()
-    filename = get_log_filename()
-    timestamp = current_time_str()
-    date = current_date_str()
-    line = f"{date} - {timestamp} | {msg}\n"
+    _ensure_dir()
+    line = f'{date_str()} - {time_str()} | {msg}\n'
+    print(line[:-2])
     try:
-        with open(filename, 'a') as f:
+        with open(log_file(), 'a') as f:
             f.write(line)
     except Exception as e:
-        print("Error writing log:", e)
-        
+        print('LOG WRITE ERROR:', e)
+
 async def log_network_state():
     while True:
-        state = get_network_state()
-        log(f"Network status: {state}")
+        log(f'Network status: {network_state()}')
         await asyncio.sleep(LOG_INTERVAL)
-     
-def cleanup_old_logs():
-    ensure_log_dir()
-    try:
-        files = os.listdir(LOG_DIR)
-        current_time = time.mktime(time.localtime())
-        
-        for f in files:
-            if f.startswith(LOG_PREFIX) and f.endswith(".log"):
-                parts = f.replace('.log', '').replace('logs-', '').split('-')
-                try:
-                    y, m, d = int(parts[0]), int(parts[1]), int(parts[2])
-                    file_time = time.mktime((y, m, d, 0, 0, 0, 0, 0))
-                    age = (current_time - file_time) / 86400
-                    if age > LOG_RETENTION_DAYS:
-                        os.remove(f"{LOG_DIR}/{f}")
-                        log(f"OS | Deleted old log file: {f}")
-                except Exception as e:
-                        print("Error parsing log date:", f, e)
-    except Exception as e:
-        print("Error cleaning logs:", e)
-        
-def get_logs():
-    ensure_log_dir()
-    logs = []
-    
-    try:
-        files = os.listdir(LOG_DIR)
-        for fname in files:
-            if fname.endswith(".log"):
-                path = f"{LOG_DIR}/{fname}"
-                try:
-                    with open(path, 'r') as f:
-                        content = f.read()
-                    logs.append({'name': fname, 'content': content})
-                except Exception as e:
-                    logs.append({'name': fname, 'error': str(e)})
-        return {'status': 'ok', 'logs': logs}
-    except Exception as e:
-        print(e)
-        return {"status": "error", "message": str(e)}
 
-async def periodic_cleanup(interval_hours=24):
+def cleanup_old_logs():
+    _ensure_dir()
+    now = time.mktime(time.localtime())
+    try:
+        for f in os.listdir(LOG_DIR):
+            if not f.endswith('.log'):
+                continue
+            try:
+                y, m, d = map(int, f.replace('.log', '').split('-')[-3:])
+                file_time = time.mktime((y, m, d, 0, 0, 0, 0, 0))
+                age_days = (now - file_time) / (24 * 3600)
+                if age_days > LOG_RETENTION_DAYS:
+                    os.remove(f'{LOG_DIR}/{f}')
+                    print(f'OS | deleted {f}')
+            except: pass
+    except Exception as e:
+        print(f'Cleanup error: {e}')
+
+
+def get_logs():
+    _ensure_dir()
+    result = []
+    try:
+        for f in os.listdir(LOG_DIR):
+            if not f.endswith('.log'):
+                continue
+            path = f'{LOG_DIR}/{f}'
+            try:
+                with open(path, 'r') as file:
+                    result.append({'name': f, 'content': file.read().split('\n')})
+            except Exception as e:
+                result.append({'name': f, 'error': str(e)})
+        return result
+    except Exception as e:
+        return {'status': 'error', 'message': str(e)}
+
+
+async def periodic_cleanup(hours=24):
     while True:
         try:
             cleanup_old_logs()
         except Exception as e:
-            log(f"SYSTEM ERROR | Log cleanup failed: {e}")
-        await asyncio.sleep(interval_hours * 3600)
+            pass
+        await asyncio.sleep(hours * 3600)

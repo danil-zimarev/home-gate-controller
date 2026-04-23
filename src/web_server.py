@@ -24,7 +24,7 @@ PIN_STATES["LED"] = False
 # ------------------------------------------------------------------------------------------
 
 def json_response(data, status=200):
-    return Response(ujson.dumps(data), status_code=status)
+    return Response(ujson.dumps(data), status_code=status, headers={"Content-Type": "application/json"})
 
 def render_template(path, context=None):
     context = context or {}
@@ -35,7 +35,6 @@ def render_template(path, context=None):
             html = html.replace(f'{{{{{k}}}}}', str(v))
         return html
     except OSError:
-        log(f"ERROR | Template {path} not found")
         return f"Template {path} not found"
 
 def sorted_pins(pins):
@@ -109,10 +108,8 @@ def save_network(request):
         conf = get_config()
         conf['wifi'] = {k: data[k] for k in required}
         update_config(conf)
-        log(f"INFO | Network settings saved: {data}")
         return json_response({'status': 'ok'})
     except Exception as e:
-        log(f"ERROR | Failed to save network: {e}")
         return json_response({'status': 'error', 'message': str(e)}, 500)
 
 @app.post('save_pins')
@@ -131,16 +128,14 @@ def save_pins(request):
 
         update_config(conf)
         init_pins()
-        log('INFO | Pin config updated')
         return json_response({'status': 'ok'})
     except Exception as e:
-        log(f"ERROR | Failed to save pins: {e}")
         return json_response({'status': 'error', 'message': str(e)}, 500)
 
 
 @app.get('logs')
 def logs_endpoint(request):
-    return json_response({get_logs()})
+    return json_response(get_logs())
 
 @app.get('reload')
 def reload_pico(request):
@@ -154,5 +149,4 @@ def reload_pico(request):
 
 async def _delayed_reboot():
     await asyncio.sleep(1)
-    log("SYSTEM | Performing reboot")
     machine.reset()
