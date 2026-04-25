@@ -1,0 +1,16 @@
+{
+  "wifi": {
+    "ssid": "WIFI_SSID",
+    "password": "WIFI_PASSWORD",
+    "ip": "",
+    "mask": "",
+    "gw": "",
+    "dns": ""
+  },
+  "pins": {
+    "LED": {"enabled": true},
+    "0": {"enabled": true},
+    "1": {"enabled": true},
+    "16": {"enabled": false}
+  }
+}
