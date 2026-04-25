@@ -3,7 +3,7 @@ import time
 import network
 import uasyncio as asyncio
 
-from src.time_zone import current_time
+from time_zone import current_time
 
 LOG_INTERVAL = 3_600
 LOG_DIR = "logs"

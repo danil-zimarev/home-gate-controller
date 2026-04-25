@@ -13,7 +13,7 @@ def uptime_ms():
     return time.ticks_diff(time.ticks_ms(), BOOT_MS)
 
 async def start_web():
-    asyncio.create_task(app.run(port=80, debug=True))
+    await app.run(port=80, debug=False)
 
 async def wifi_boot():
     if not await connect_to_wifi():

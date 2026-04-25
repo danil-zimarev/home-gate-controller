@@ -8,8 +8,8 @@ ap = network.WLAN(network.AP_IF)
 _wifi_lock = False
 
 CONNECT_RETRIES = 20
-RETRY_DELAY = 0.5
-CHECK_INTERVAL = 10
+RETRY_DELAY = 2
+CHECK_INTERVAL = 300
 INTERFACE_RESET_DELAY = 0.5
 
 async def _disable_interfaces():
@@ -58,6 +58,7 @@ async def connect_to_wifi():
         else:
             log('ERROR | Wi-Fi connection timeout')
             return False
+        await asyncio.sleep(1)
         await sync_time()
         if all(k in wifi for k in ('ip', 'mask', 'dns', 'gw')):
             sta.ifconfig((wifi['ip'], wifi['mask'], wifi['gw'], wifi['dns']))
@@ -81,9 +82,10 @@ async def start_ap(ssid='PicoW'):
 async def keep_wifi():
     while True:
         try:
-            if not await connect_to_wifi():
-                log("ERROR | Reconnect failed, starting AP")
-                await start_ap()
+            if not sta.isconnected():
+                if not await connect_to_wifi():
+                    log("ERROR | Reconnect failed, starting AP")
+                    await start_ap()
         except Exception as e:
             log(f'ERROR | Wi-Fi loop error: {str(e)}')
         await asyncio.sleep(CHECK_INTERVAL)

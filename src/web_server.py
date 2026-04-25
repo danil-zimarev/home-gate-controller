@@ -11,7 +11,7 @@ app = Microdot()
 Response.default_content_type = "text/html"
 
 # Pins 16+ are active-low relays: True = relay off (safe default)
-PIN_STATES = {str(p): False if p < 16 else True for p in range(28)}
+PIN_STATES = {str(p): False if p < 16 else True for p in range(29)}
 PIN_STATES["LED"] = False
 
 
@@ -47,17 +47,18 @@ def index(request):
         data = pins[pin]
         enabled = data.get("enabled", False)
         pin_checkboxes.append(
-            f'<label><input type="checkbox" name="{pin}" {"checked" if enabled else ""}/> GPIO {pin}</label><br>'
+            f'<label><input type="checkbox" name="{pin}" {"checked" if enabled else ""}/> GPIO {pin}</label>'
         )
 
         if enabled:
             state = PIN_STATES.get(pin, False)
+            # Render toggle with class names so client can switch classes (on/off) for coloring
+            cls = "on" if state else "off"
+            text = "ON" if state else "OFF"
             pin_toggles.append(
-                f"""
-                <a href="/toggle/{pin}" class="pin-toggle-link" data-pin="{pin}">
-                    GPIO {pin} <span class="toggle-state" style="color:{"green" if state else "red"}">{"ON" if state else "OFF"}</span>
-                </a>
-                """
+                f'<a href="/toggle/{pin}" class="pin-toggle-link" data-pin="{pin}">'
+                + f'GPIO {pin} <span class="toggle-state {cls}">{text}</span>'
+                + '</a>'
             )
 
     html = render_template("www/index.html", {
@@ -73,6 +74,40 @@ def index(request):
     return Response(html)
 
 
+def _build_pin_toggles_html():
+    conf = get_config()
+    pins = conf.get("pins", {})
+    pin_toggles = []
+
+    for p in sorted_pins(pins):
+        pin = str(p)
+        data = pins[pin]
+        enabled = data.get("enabled", False)
+
+        if enabled:
+            state = PIN_STATES.get(pin, False)
+            cls = "on" if state else "off"
+            text = "ON" if state else "OFF"
+            pin_toggles.append(
+                f'<a href="/toggle/{pin}" class="pin-toggle-link" data-pin="{pin}">'
+                + f'GPIO {pin} <span class="toggle-state {cls}">{text}</span>'
+                + '</a>'
+            )
+
+    return "".join(pin_toggles)
+
+
+@app.get('/pin_toggles')
+def pin_toggles_fragment(request):
+    """Return the HTML fragment for the pin toggle list."""
+    try:
+        html = _build_pin_toggles_html()
+        return Response(html)
+    except Exception as e:
+        log(f"ERROR | pin_toggles_fragment: {e}")
+        return Response("", status_code=500)
+
+
 @app.post("/toggle/<pin>")
 def toggle(request, pin):
     pins = get_config().get("pins", {})
@@ -81,6 +116,8 @@ def toggle(request, pin):
         return json_response({"status": "error", "message": "Invalid Pin"}, 400)
 
     state = toggle_pin(pin)
+    if state is None:
+        return json_response({"status": "error", "message": "Pin not initialized"}, 400)
     PIN_STATES[pin] = state
     return json_response({"status": "ok", "pin": pin, "state": state})
 
