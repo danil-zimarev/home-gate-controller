@@ -26,4 +26,3 @@ def toggle_pin(name):
     pin.toggle()
     value = pin.value()
     return not value if is_active_low(name) else bool(value)
-

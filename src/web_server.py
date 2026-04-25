@@ -7,21 +7,13 @@ from config_manager import get_config, update_config
 from pin_manager import init_pins, toggle_pin
 from log_manager import log, get_logs
 
-
-# ------------------------------------------------------------------------------------------
-# App setup
-# ------------------------------------------------------------------------------------------
-
 app = Microdot()
-Response.default_content_type = 'text/html'
+Response.default_content_type = "text/html"
 
+# Pins 16+ are active-low relays: True = relay off (safe default)
 PIN_STATES = {str(p): False if p < 16 else True for p in range(28)}
 PIN_STATES["LED"] = False
 
-
-# ------------------------------------------------------------------------------------------
-# Helpers
-# ------------------------------------------------------------------------------------------
 
 def json_response(data, status=200):
     return Response(ujson.dumps(data), status_code=status, headers={"Content-Type": "application/json"})
@@ -32,7 +24,7 @@ def render_template(path, context=None):
         with open(path) as f:
             html = f.read()
         for k, v in context.items():
-            html = html.replace(f'{{{{{k}}}}}', str(v))
+            html = html.replace(f"{{{{{k}}}}}", str(v))
         return html
     except OSError:
         return f"Template {path} not found"
@@ -42,22 +34,18 @@ def sorted_pins(pins):
     other = [p for p in pins if not p.isdigit()]
     return numeric + other
 
-# ------------------------------------------------------------------------------------------
-# Routes
-# ------------------------------------------------------------------------------------------
-
-@app.route('/')
+@app.get("/")
 def index(request):
     conf = get_config()
-    wifi = conf.get('wifi', {})
-    pins = conf.get('pins', {})
+    wifi = conf.get("wifi", {})
+    pins = conf.get("pins", {})
     pin_checkboxes = []
     pin_toggles = []
 
     for p in sorted_pins(pins):
         pin = str(p)
         data = pins[pin]
-        enabled = data.get('enabled', False)
+        enabled = data.get("enabled", False)
         pin_checkboxes.append(
             f'<label><input type="checkbox" name="{pin}" {"checked" if enabled else ""}/> GPIO {pin}</label><br>'
         )
@@ -65,87 +53,84 @@ def index(request):
         if enabled:
             state = PIN_STATES.get(pin, False)
             pin_toggles.append(
-                f'''
+                f"""
                 <a href="/toggle/{pin}" class="pin-toggle-link" data-pin="{pin}">
-                    GPIO {pin} <span class="toggle-state" style="color:{'green' if state else 'red'}">{'ON' if state else 'OFF'}</span>
+                    GPIO {pin} <span class="toggle-state" style="color:{"green" if state else "red"}">{"ON" if state else "OFF"}</span>
                 </a>
-                '''
+                """
             )
 
-    html = render_template('www/index.html', {
+    html = render_template("www/index.html", {
         "ssid": wifi.get("ssid", ""),
         "password": wifi.get("password", ""),
         "ip": wifi.get("ip", ""),
         "mask": wifi.get("mask", ""),
         "dns": wifi.get("dns", ""),
         "gw": wifi.get("gw", ""),
-        "pin_checkboxes": ''.join(pin_checkboxes),
-        "pin_toggles": ''.join(pin_toggles)
+        "pin_checkboxes": "".join(pin_checkboxes),
+        "pin_toggles": "".join(pin_toggles)
     })
     return Response(html)
 
 
-@app.post('/toggle/<pin>')
+@app.post("/toggle/<pin>")
 def toggle(request, pin):
-    pins = get_config().get('pins', {})
+    pins = get_config().get("pins", {})
 
     if pin not in pins:
-        return json_response({'status': 'error', 'message': 'Invalid Pin'}, 400)
+        return json_response({"status": "error", "message": "Invalid Pin"}, 400)
 
     state = toggle_pin(pin)
     PIN_STATES[pin] = state
-    return json_response({'status': 'ok', 'pin': pin, 'state': state})
+    return json_response({"status": "ok", "pin": pin, "state": state})
 
 
-@app.post('/save_network')
+@app.post("/save_network")
 def save_network(request):
     try:
         data = request.json or {}
-        required = ('ssid', 'password', 'ip', 'mask', 'dns', 'gw')
-        if not all(k in data for k in required):
-            return json_response({'status': 'error', 'message': 'Missing required fields'}, 400)
-
+        required = ("ssid", "password")
+        optional = ("ip", "mask", "dns", "gw")
         conf = get_config()
-        conf['wifi'] = {k: data[k] for k in required}
+        conf["wifi"] = {k: data[k] for k in required}
+        conf["wifi"].update({k: data.get(k, "") for k in optional})
         update_config(conf)
-        return json_response({'status': 'ok'})
+        return json_response({"status": "ok"})
     except Exception as e:
-        return json_response({'status': 'error', 'message': str(e)}, 500)
+        log(f"ERROR | save_network: {e}")
+        return json_response({"status": "error", "message": str(e)}, 500)
 
-@app.post('save_pins')
+@app.post("/save_pins")
 def save_pins(request):
     try:
         data = request.json or {}
-        enabled = data.get('enabled_pins', {})
+        enabled = data.get("enabled_pins", {})
         if not isinstance(enabled, dict):
-            return json_response({'status': 'error', 'message': 'Invalid data'}, 400)
+            return json_response({"status": "error", "message": "Invalid data"}, 400)
         conf = get_config()
-        pins = conf.get('pins', {})
+        pins = conf.get("pins", {})
 
         for pin, value in enabled.items():
             if pin in pins:
-                pins[pin]['enabled'] = bool(value)
+                pins[pin]["enabled"] = bool(value)
 
         update_config(conf)
         init_pins()
-        return json_response({'status': 'ok'})
+        return json_response({"status": "ok"})
     except Exception as e:
-        return json_response({'status': 'error', 'message': str(e)}, 500)
+        log(f"ERROR | save_pins: {e}")
+        return json_response({"status": "error", "message": str(e)}, 500)
 
 
-@app.get('logs')
+@app.get("/logs")
 def logs_endpoint(request):
     return json_response(get_logs())
 
-@app.get('reload')
+@app.get("/reload")
 def reload_pico(request):
     log("SYSTEM | Reload requested")
     asyncio.create_task(_delayed_reboot())
-    return json_response({'status': 'ok', 'message': 'Rebooting...'})
-
-# ------------------------------------------------------------------------------------------
-# Background tasks
-# ------------------------------------------------------------------------------------------
+    return json_response({"status": "ok", "message": "Rebooting..."})
 
 async def _delayed_reboot():
     await asyncio.sleep(1)

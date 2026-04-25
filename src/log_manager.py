@@ -3,98 +3,80 @@ import time
 import network
 import uasyncio as asyncio
 
-LOG_INTERVAL = 3600
-LOG_DIR = 'logs'
-LOG_PREFIX = 'logs'
-LOG_RETENTION_DAYS = 7
+from src.time_zone import current_time
+
+LOG_INTERVAL = 3_600
+LOG_DIR = "logs"
 sta = network.WLAN(network.STA_IF)
-TIMEZONE_OFFSET = 3 * 3600
 
-
-# ------------------------------------------------------------------------------------------
-# Helpers
-# ------------------------------------------------------------------------------------------
 def _ensure_dir():
     try:
         if LOG_DIR not in os.listdir():
             os.mkdir(LOG_DIR)
-    except OSError as e:
+    except OSError:
         pass
 
-
-def now():
-    return time.localtime(time.time() + TIMEZONE_OFFSET)
-
-def date_str():
-    y, m, d, *_ = now()
-    return f'{y:04d}-{m:02d}-{d:02d}'
-
-def time_str():
-    _, _, _, h, mi, s, *_ = now()
-    return f'{h:02d}:{mi:02d}:{s:02d}'
-
-def log_file():
-    return f'{LOG_DIR}/{LOG_PREFIX}-{date_str()}.log'
+def format_time(t):
+    y, m, d, h, mi, s, *_ = t
+    return f"{y:04d}-{m:02d}-{d:02d}", f"{h:02d}:{mi:02d}:{s:02d}"
 
 def network_state():
-    return f'connected, {sta.ifconfig()}' if sta.isconnected() else 'disconnected'
+    return f"connected, {sta.ifconfig()}" if sta.isconnected() else "disconnected"
 
 def log(msg):
     _ensure_dir()
-    line = f'{date_str()} - {time_str()} | {msg}\n'
-    print(line[:-2])
+    t = current_time()
+    date, clock = format_time(t)
+    line = f"{date} - {clock} | {msg}\n"
+    file_name = f"{LOG_DIR}/{date}.log"
     try:
-        with open(log_file(), 'a') as f:
+        with open(file_name, "a") as f:
             f.write(line)
     except Exception as e:
-        print('LOG WRITE ERROR:', e)
+        print("Log write error:", e)
 
 async def log_network_state():
     while True:
-        log(f'Network status: {network_state()}')
+        log(f"Network status: {network_state()}")
         await asyncio.sleep(LOG_INTERVAL)
 
 def cleanup_old_logs():
     _ensure_dir()
-    now = time.mktime(time.localtime())
+    now_epoch = time.mktime(current_time())
     try:
         for f in os.listdir(LOG_DIR):
-            if not f.endswith('.log'):
+            if not f.endswith(".log"):
                 continue
             try:
-                y, m, d = map(int, f.replace('.log', '').split('-')[-3:])
-                file_time = time.mktime((y, m, d, 0, 0, 0, 0, 0))
-                age_days = (now - file_time) / (24 * 3600)
-                if age_days > LOG_RETENTION_DAYS:
-                    os.remove(f'{LOG_DIR}/{f}')
-                    print(f'OS | deleted {f}')
-            except: pass
+                y, m, d = map(int, f.replace(".log", "").split("-")[-3:])
+                file_time = time.mktime((y, m, d, 0, 0, 0, 0, 0, 0))
+                age_days = (now_epoch - file_time) / 86_400
+                if age_days > 7:
+                    os.remove(f"{LOG_DIR}/{f}")
+                    print(f"OS | deleted {f}")
+            except RuntimeError: pass
     except Exception as e:
-        print(f'Cleanup error: {e}')
-
+        print(f"Cleanup error: {e}")
 
 def get_logs():
     _ensure_dir()
     result = []
     try:
         for f in os.listdir(LOG_DIR):
-            if not f.endswith('.log'):
+            if not f.endswith(".log"):
                 continue
-            path = f'{LOG_DIR}/{f}'
+            path = f"{LOG_DIR}/{f}"
             try:
-                with open(path, 'r') as file:
-                    result.append({'name': f, 'content': file.read().split('\n')})
+                with open(path, "r") as file:
+                    result.append({"name": f, "content": file.read().split("\n")})
             except Exception as e:
-                result.append({'name': f, 'error': str(e)})
+                result.append({"name": f, "error": str(e)})
         return result
     except Exception as e:
-        return {'status': 'error', 'message': str(e)}
+        return {"status": "error", "message": str(e)}
 
 
 async def periodic_cleanup(hours=24):
     while True:
-        try:
-            cleanup_old_logs()
-        except Exception as e:
-            pass
+        cleanup_old_logs()
         await asyncio.sleep(hours * 3600)
