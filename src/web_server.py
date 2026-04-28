@@ -6,14 +6,10 @@ from microdot import Microdot, Response
 from config_manager import get_config, update_config
 from pin_manager import init_pins, toggle_pin
 from log_manager import log, get_logs
+from pin_manager import get_pin_state
 
 app = Microdot()
 Response.default_content_type = "text/html"
-
-# Pins 16+ are active-low relays: True = relay off (safe default)
-PIN_STATES = {str(p): False if p < 16 else True for p in range(29)}
-PIN_STATES["LED"] = False
-
 
 def json_response(data, status=200):
     return Response(ujson.dumps(data), status_code=status, headers={"Content-Type": "application/json"})
@@ -51,8 +47,7 @@ def index(request):
         )
 
         if enabled:
-            state = PIN_STATES.get(pin, False)
-            # Render toggle with class names so client can switch classes (on/off) for coloring
+            state = get_pin_state(pin)
             cls = "on" if state else "off"
             text = "ON" if state else "OFF"
             pin_toggles.append(
@@ -85,7 +80,7 @@ def _build_pin_toggles_html():
         enabled = data.get("enabled", False)
 
         if enabled:
-            state = PIN_STATES.get(pin, False)
+            state = get_pin_state(pin)
             cls = "on" if state else "off"
             text = "ON" if state else "OFF"
             pin_toggles.append(
@@ -115,11 +110,10 @@ def toggle(request, pin):
     if pin not in pins:
         return json_response({"status": "error", "message": "Invalid Pin"}, 400)
 
-    state = toggle_pin(pin)
-    if state is None:
+    value = toggle_pin(pin)
+    if value is None:
         return json_response({"status": "error", "message": "Pin not initialized"}, 400)
-    PIN_STATES[pin] = state
-    return json_response({"status": "ok", "pin": pin, "state": state})
+    return json_response({"status": "ok", "pin": pin, "state": value})
 
 
 @app.post("/save_network")
