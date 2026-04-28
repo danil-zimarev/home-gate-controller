@@ -1,8 +1,6 @@
 Pico W Hardware
 ==============
 
-**Control your Raspberry Pico W GPIO pins from a web browser.**
-
 **Control your Raspberry Pi Pico W GPIO pins from a web browser.**
 
 This project runs a small web server directly on the Pico W. Once you connect it to your Wi-Fi, you can open a browser on any device in the same network and
@@ -97,15 +95,9 @@ Then open `src/config.json` and fill in your details:
     "dns": ""
   },
   "pins": {
-    "LED": {
-      "enabled": true
-    },
-    "1": {
-      "enabled": true
-    },
-    "2": {
-      "enabled": false
-    }
+    "LED": {"enabled": true, "is_active_low": false},
+    "0": {"enabled": false, "is_active_low": false},
+    "1": {"enabled": false, "is_active_low": false}
   }
 }
 ```
@@ -216,8 +208,8 @@ Start web server + background tasks:
 | `0` – `15`  | Active-high  | LOW (off)        | Standard digital output                               |
 | `16` – `28` | Active-low   | HIGH (relay off) | Common relay modules are active-low — HIGH = safe/off |
 
-> **Important:** Pins 16 and above are assumed to drive relays. The safe default is HIGH (relay coil not energised). Always check your wiring before enabling
-> these pins.
+> **Important:** Pins 16 and above are assumed to drive relays. The safe default is HIGH (relay coil not energised). Always check your wiring before enabling these pins.
+> Can be configured from `config.json`
  
 ---
 
