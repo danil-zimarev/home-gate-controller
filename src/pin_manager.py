@@ -3,8 +3,8 @@ from config_manager import get_config
 
 PINS = {}
 
-def is_active_low(pin):
-    return pin.isdigit() and int(pin) < 16
+def is_active_low(name):
+    return get_config().get("pins", {}).get(name, {}).get('is_active_low', False)
 
 
 def init_pins():
@@ -18,6 +18,14 @@ def init_pins():
         pin = Pin(pin_id, Pin.OUT)
         pin.value(1 if is_active_low(name) else 0)
         PINS[name] = pin
+
+def get_pin_state(name):
+    pin = PINS.get(name)
+    if not pin:
+        return False
+    value = pin.value()
+    return not value if is_active_low(name) else bool(value)
+
 
 def toggle_pin(name):
     pin = PINS.get(name)

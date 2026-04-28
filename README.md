@@ -1,134 +1,285 @@
-pico-hardware
+Pico W Hardware
 ==============
 
-Small MicroPython project for controlling GPIOs on a Raspberry Pi Pico W via a minimal web UI.
+**Control your Raspberry Pico W GPIO pins from a web browser.**
 
-Overview
---------
-- This project runs on the Raspberry Pi Pico W (RP2040 + CYW43439 Wi‑Fi chip).
-- It uses MicroPython and a tiny web framework (Microdot, included under `src/lib/microdot`).
-- The web UI (served from `www/index.html`) allows enabling/disabling configured pins and toggling them.
+**Control your Raspberry Pi Pico W GPIO pins from a web browser.**
 
-Repository layout (important files)
-----------------------------------
-- src/main.py           -- application entrypoint (should be copied to the Pico as `main.py`)
-- src/web_server.py     -- web handlers and endpoints
-- src/config.json       -- default configuration (Wi‑Fi, pin definitions)
-- src/pin_manager.py    -- GPIO initialization and toggle helpers
-- src/lib/microdot/*    -- bundled Microdot web microframework
-- www/index.html        -- frontend HTML used by the web server
-- tools/deploy.sh       -- helper script (optional) to deploy files to device
+This project runs a small web server directly on the Pico W. Once you connect it to your Wi-Fi, you can open a browser on any device in the same network and
+turn pins on or off without writing any code.
 
-Requirements
-------------
-- Hardware: Raspberry Pi Pico W (not the non‑W Pico)
-- MicroPython firmware for the Pico W (download the UF2 from https://micropython.org)
-- Host machine tools to upload files to the Pico:
-  - Recommended: mpremote (part of the pyboard tools)
-  - Alternative: Thonny, rshell, ampy
-- Python 3 on your host to install mpremote: pip3 install mpremote
+---
 
-Quick start (recommended using mpremote)
----------------------------------------
-1. Flash MicroPython on the Pico W
-   - Put the Pico W into bootloader mode: hold BOOTSEL while plugging it into USB.
-   - Copy the Pico W MicroPython UF2 file (from micropython.org) to the mounted USB drive.
-   - The Pico will reboot into MicroPython.
+## How It Works
 
-2. Install mpremote on your host (if you don't have it):
-
-```bash
-pip3 install mpremote
+```
+┌─────────────┐        Wi-Fi         ┌───────────────────┐
+│  Browser    │ ◄──────────────────► │  Raspberry Pi     │
+│  (phone /   │   http://<pico-ip>/  │  Pico W           │
+│   laptop)   │                      │                   │
+└─────────────┘                      │  ┌─────────────┐  │
+                                     │  │  GPIO pins  │  │
+                                     │  │  (relays,   │  │
+                                     │  │   LEDs …)   │  │
+                                     │  └─────────────┘  │
+                                     └───────────────────┘
 ```
 
-3. Copy the project files to the Pico. From the repository root run:
+1. The Pico W connects to your Wi-Fi using credentials from `config.json`.
+2. It starts a tiny web server on port 80.
+3. You open the IP address in a browser.
+4. The web page lets you toggle pins and change settings - no terminla needed.
 
-```bash
-# Copy all files under src/ to the device root (recursively)
-mpremote connect usb fs cp -r src/ :/
+---
 
-# Alternatively, if `mpremote connect usb` isn't detecting your device, specify the port:
-# mpremote connect /dev/tty.usbmodemXXXX fs cp -r src/ :/
+## Project Structure
+
+```
+pico-hardware/
+├── src/
+│   ├── main.py            ← entry point, runs on boot
+│   ├── web_server.py      ← HTTP routes and page rendering
+│   ├── config_manager.py  ← reads / writes config.json
+│   ├── pin_manager.py     ← GPIO init and toggle logic
+│   ├── network_manager.py ← Wi-Fi connection and fallback AP
+│   ├── log_manager.py     ← logging to daily .log files
+│   ├── time_zone.py       ← Tallinn local time (EET/EEST)
+│   ├── config.json        ← your settings (create from example)
+│   └── lib/
+│       └── microdot/      ← bundled web framework
+│
+├── www/
+│   └── index.html         ← web UI served by the Pico
+│
+├── config.example.json    ← template — copy and edit this
+└── deploy.sh              ← helper script to upload files
 ```
 
-Notes:
-- The command above will copy files such that `main.py`, `web_server.py`, `config.json`, and `lib/` appear at the Pico's root.
-- `main.py` is executed automatically on boot by MicroPython, so after copying you can reset the board to start the app:
+---
+
+## Requirements
+
+| What     | Details                                                                                      |
+|----------|----------------------------------------------------------------------------------------------|
+| Hardware | Raspberry Pi **Pico W** (must be the Wi-Fi version                                           |
+| Firmware | MicroPython for Pico W — download the `.uf2` from [micropython.org](https://micropython.org) |
+| Tools    | Python 3 + `mpremote` `(pip3 install mpremote)`                                              |
+| Optional | Thonny IDE - easier for begginers                                                            |
+
+---
+
+## Quick Start
+
+### Step 1 – Flash MicroPython
+
+1. Hold the **BOOTSEL** button on the Pico W.
+2. Plug it into your computer via a USB cable. Keep holding the button.
+3. A USB drive named `RPI-RP2` will appear. Release the button.
+4. Copy the downloaded `micropython.uf2` file onto the `RPI-RP2` drive.
+5. The Pico will reboot automatically into MicroPython.
+
+### Step 2 – Create Your Config
 
 ```bash
-mpremote connect usb reset
-```
-
-4. (Optional) Use the included deploy script
-   - There's a helper script at `tools/deploy.sh`. It may wrap common copy/reset steps for your environment. You can run it from the repo root:
-
-```bash
-chmod +x tools/deploy.sh
-./tools/deploy.sh <device_path>
-```
-
-Configure Wi‑Fi and pins
-------------------------
-- Start from the provided example `src/config.example.json`. Copy it to `src/config.json` and edit the copy with your Wi‑Fi credentials and which pins you want enabled. The application reads `src/config.json` at runtime.
-
-```bash
-# make an editable config from the example
 cp src/config.example.json src/config.json
-# then edit the file using your editor, e.g.:
-# nano src/config.json
 ```
 
-- Example `src/config.example.json` (replace the placeholders before use):
+Then open `src/config.json` and fill in your details:
 
 ```json
 {
   "wifi": {
-    "ssid": "YOUR_SSID",
-    "password": "YOUR_PASSWORD",
+    "ssid": "YourNetworkName",
+    "password": "YourNetworkPassword",
     "ip": "",
     "mask": "",
     "gw": "",
     "dns": ""
   },
   "pins": {
-    "LED": {"enabled": true},
-    "0": {"enabled": true},
-    "1": {"enabled": true},
-    "16": {"enabled": false}
+    "LED": {
+      "enabled": true
+    },
+    "1": {
+      "enabled": true
+    },
+    "2": {
+      "enabled": false
+    }
   }
 }
 ```
 
-- Important notes:
-  - Remove the placeholder values (e.g. "YOUR_SSID") and put real strings before uploading the file.
-  - Pins with numeric names >= 16 are treated as active‑low relays in the code (safe default: relay off). Verify wiring before enabling them.
-  - The app only shows and allows toggling for pins that exist in the `pins` object and have `enabled: true`.
-  - If you want to set a static IP, fill in `ip`, `mask`, `gw`, and `dns`; otherwise leave them empty to use DHCP.
+> **Tip:** Leave the `ip`, `mask`, `gw`, and `dns` fields empty to use DHCP (automatic IP).
+> Fill them only if you want to set a static IP address for your Pico.
 
-Accessing the web UI
---------------------
-- The device will connect to Wi‑Fi using values in `config.json`. You can either set a static IP in the config or let DHCP assign an IP.
-- Once connected, open a browser to ```http://<ip>/``` (the root endpoint serves `index.html`).
-- If using in AP mode default ip is ```192.168.4.1```
-- Useful endpoints:
-  - GET /            -- index page
-  - POST /toggle/<pin>  -- toggle a pin (used by the UI)
-  - POST /save_network  -- save Wi‑Fi settings
-  - POST /save_pins     -- save which pins are enabled
-  - GET /logs           -- retrieve logs
-  - GET /reload         -- reboot the Pico
+### Step 3 – Upload Files to the Pico
 
-Development tips
-----------------
-- Use Thonny as an easier alternative for interactive development — it can open a MicroPython REPL and upload files.
-- If you change `main.py` or any module and want the changes to take effect, copy the files and reset the board (or `mpremote reset`).
+```bash
+# Install mpremote if you don't have it
+pip3 install mpremote
 
-Security and safety
--------------------
-- Pins >=16 are treated as active‑low by default because they're commonly used to drive relays. Verify wiring before enabling pins.
-- This project is intended for small, trusted networks. Do not expose the Pico's web UI to untrusted networks without adding authentication.
+# Copy everything from src/ to the Pico
+mpremote connect usb fs cp -r src/ :/
 
-Further changes
----------------
-- To add/remove pins, edit `src/config.json` and use the UI or re-upload the file.
-- To extend functionality, `web_server.py` contains the route handlers and can be modified to add new endpoints.
+# Reboot the Pico to run the code
+mpremote connect usb reset
+```
+
+### Step 4 – Open the Web UI
+
+Find the IP address your router gave to the Pico (check your router's device list, or set a static IP in the `config.json`). Then open a browser and go to:
+
+```
+http://<pico-ip>/
+```
+
+---
+
+## Web UI – What you can do
+
+```
+┌─────────────────────────────────────────────┐
+│  Pico Control Page                          │
+│─────────────────────────────────────────────│
+│  01 — Network Configuration                 │
+│       SSID / Password / IP / Mask / GW / DNS│
+│       [ Save Network ]                      │
+│─────────────────────────────────────────────│
+│  02 — Configure Pins                        │
+│       ☑ GPIO 0   ☑ GPIO 1   ☐ GPIO LED  …   │
+│       [ Save Pins ]                         │
+│─────────────────────────────────────────────│
+│  03 — Toggle Pins                           │
+│       GPIO 0  [ ON  ]                       │
+│       GPIO 1  [ OFF ]                       │
+│─────────────────────────────────────────────│
+│  [ ↓ Logs ]   [ ↺ Reboot ]                  │
+└─────────────────────────────────────────────┘
+```
+
+| Section                   | What it does                                                                                   |
+|---------------------------|------------------------------------------------------------------------------------------------|
+| **Network Configuration** | Change Wi-Fi credentials or set a static IP. Changes are saved to `config.json` on the device. |
+| **Configure Pins**        | Choose which GPIO pins are active. Inactive pins are hidden from the toggle list.              |
+| **Toggle Pins**           | Click a pin row to switch it on or off instantly. The button shows the current state.          |
+| **Logs**                  | Downloads all log files as a `.zip` archive.                                                   |
+| **Reboot**                | Restarts the Pico remotely. The page reloads automatically after ~10 seconds.                  |
+
+---
+
+## API Endpoints
+
+| Method | Path            | Description                                    |
+|--------|-----------------|------------------------------------------------|
+| `GET`  | `/`             | Serves the main web UI                         |
+| `POST` | `/toggle/<pin>` | Toggles a pin; returns `{"state": true/false}` |
+| `POST` | `/save_network` | Updates Wi-Fi settings                         |
+| `POST` | `/save_pins`    | Updates which pins are enabled                 |
+| `GET`  | `/logs`         | Returns log file contents as JSON              |
+| `GET`  | `/reload`       | Reboots the Pico after 1 second                |
+
+ 
+---
+
+## Boot Sequence
+
+```
+Power on
+   │
+   ▼
+init_pins()          ← set up GPIO outputs
+   │
+   ▼
+connect_to_wifi()    ← try to join saved network (5 retries, 2s each)
+   │
+   ├─ success ──► sync NTP time ──► apply static IP (if set)
+   │
+   └─ failure ──► start_ap()    ──► open Wi-Fi hotspot "PicoW"
+                                    (connect at 192.168.4.1)
+   │
+   ▼
+Start web server + background tasks:
+   ├── keep_wifi()        checks connection every 5 min
+   ├── log_network_state() writes status every hour
+   └── periodic_cleanup() deletes logs older than 7 days
+```
+
+ 
+---
+
+## Pin Behaviour
+
+| Pin number  | Type         | Default state    | Notes                                                 |
+|-------------|--------------|------------------|-------------------------------------------------------|
+| `LED`       | Built-in LED | OFF              | Toggles on boot to confirm startup                    |
+| `0` – `15`  | Active-high  | LOW (off)        | Standard digital output                               |
+| `16` – `28` | Active-low   | HIGH (relay off) | Common relay modules are active-low — HIGH = safe/off |
+
+> **Important:** Pins 16 and above are assumed to drive relays. The safe default is HIGH (relay coil not energised). Always check your wiring before enabling
+> these pins.
+ 
+---
+
+## Logs
+
+Log files are stored on the Pico at `logs/YYYY-MM-DD.log`. Each line looks like:
+
+```
+2025-04-28 - 14:32:05 | Network status: connected, ('192.168.1.42', ...)
+2025-04-28 - 14:00:00 | SYSTEM | Boot sequence finished in 3421ms
+```
+
+Logs older than 7 days are deleted automatically to save flash storage space.
+ 
+---
+
+## Using the Deploy Script (Optional)
+
+The `deploy.sh` script minifies `index.html` before uploading, which saves storage on the Pico.
+
+```bash
+# Install the Python minifier
+pip3 install minify-html
+ 
+# Run the script with your serial port
+chmod +x deploy.sh
+./deploy.sh /dev/ttyACM0
+```
+
+ 
+---
+
+## Fallback Access Point
+
+If the Pico cannot connect to your Wi-Fi, it creates its own open hotspot:
+
+| Setting             | Value         |
+|---------------------|---------------|
+| Network name (SSID) | `PicoW`       |
+| Password            | none (open)   |
+| Pico IP address     | `192.168.4.1` |
+
+Connect your device to `PicoW`, then open `http://192.168.4.1/` to update the Wi-Fi settings.
+ 
+---
+
+## Security Notice
+
+This project is designed for use on **small, trusted home or lab networks**. The web UI has no login or password protection. Do not connect the Pico W directly to the internet or to networks you do not control.
+ 
+---
+
+## Troubleshooting
+
+| Problem | What to try |
+|---------|------------|
+| Can't find the Pico's IP | Check your router's connected devices list, or set a static IP in `config.json` |
+| Wi-Fi keeps failing | Double-check `ssid` and `password` in `config.json`; the Pico is case-sensitive |
+| Pins don't respond | Make sure the pin has `"enabled": true` in `config.json` and click **Save Pins** |
+| Page won't load after reboot | Wait ~10 seconds for the Pico to reconnect to Wi-Fi |
+| Relay stays on after reboot | Pins ≥ 16 default to HIGH on boot (relay off). This is intentional. |
+ 
+---
+
+*pico-w controller v1.0 · MicroPython · Microdot*

@@ -8,9 +8,32 @@
     "dns": ""
   },
   "pins": {
-    "LED": {"enabled": true},
-    "0": {"enabled": true},
-    "1": {"enabled": true},
-    "16": {"enabled": false}
+    "LED": {"enabled": true, "is_active_low": false},
+    "0": {"enabled": false, "is_active_low": false},
+    "1": {"enabled": false, "is_active_low": false},
+    "2": {"enabled": false, "is_active_low": false},
+    "3": {"enabled": false, "is_active_low": false},
+    "4": {"enabled": false, "is_active_low": false},
+    "5": {"enabled": false, "is_active_low": false},
+    "6": {"enabled": false, "is_active_low": false},
+    "7": {"enabled": false, "is_active_low": false},
+    "8": {"enabled": false, "is_active_low": false},
+    "9": {"enabled": false, "is_active_low": false},
+    "10": {"enabled": false, "is_active_low": false},
+    "11": {"enabled": false, "is_active_low": false},
+    "12": {"enabled": false, "is_active_low": false},
+    "13": {"enabled": false, "is_active_low": false},
+    "14": {"enabled": false, "is_active_low": false},
+    "15": {"enabled": false, "is_active_low": false},
+    "16": {"enabled": false, "is_active_low": true},
+    "17": {"enabled": false, "is_active_low": true},
+    "18": {"enabled": false, "is_active_low": true},
+    "19": {"enabled": false, "is_active_low": true},
+    "20": {"enabled": false, "is_active_low": true},
+    "21": {"enabled": false, "is_active_low": true},
+    "22": {"enabled": false, "is_active_low": true},
+    "26": {"enabled": false, "is_active_low": true},
+    "27": {"enabled": false, "is_active_low": true},
+    "28": {"enabled": false, "is_active_low": true}
   }
 }

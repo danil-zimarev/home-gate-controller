@@ -7,7 +7,7 @@ sta = network.WLAN(network.STA_IF)
 ap = network.WLAN(network.AP_IF)
 _wifi_lock = False
 
-CONNECT_RETRIES = 20
+CONNECT_RETRIES = 5
 RETRY_DELAY = 2
 CHECK_INTERVAL = 300
 INTERFACE_RESET_DELAY = 0.5
